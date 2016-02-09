@@ -1,12 +1,11 @@
 #!/bin/bash
 ########################################################################################
 #
-#       Filename: ds8870-lsda.sh
+#       Filename: ds8870-lsddm.sh
 #       Author: Matthew Mattox matt@mattox.work
-#       Date: 12/18/2014
-#       Purpose: Nagios Service Check to verify disk array status
-#		Update: Updated to include the CFG files.
-#		Update: 07/01/2015 - Added A1DS88701 and B1DS88701 
+#       Date: 02/03/2015
+#       Purpose: Nagios Service Check to verify DDM status
+#       Update: Updated to include the CFG files.
 #
 ########################################################################################
 
@@ -15,15 +14,16 @@ usage()
 cat << EOF
 usage: $0 options
 
-Nagios Service Check to verify disk array status.
+Nagios Service Check to verify DDM status.
 
 OPTIONS:
    -h      Show this message
    -S      ds8870 Name     			Example: chidc8870
+   -D      Device ID                            Example: IBM.2107-75BMP51
 EOF
 }
 
-while getopts .h:S:A:V.v. OPTION
+while getopts .h:S:D:V.v. OPTION
 do
      case $OPTION in
          h)
@@ -32,6 +32,9 @@ do
              ;;
          S)
              DS8870NAME=$OPTARG
+             ;;
+         D)
+             DEVID=$OPTARG
              ;;
          V)
              VERBOSE=1
@@ -61,8 +64,6 @@ read -p "Please press [Enter] to continue..."
 fi
 ##Overview - end
 
-CFG=""
-
 if [ "$DS8870NAME" == "a1ds88701" ] || [ "$DS8870NAME" == "A1DS88701" ]
 then
 	DS8870NAME="A1DS88701"
@@ -81,22 +82,16 @@ fi
 
 DEVID=$(cat $CFG | grep ^devid | awk '{print $2}')
 
-if [ "$VERBOSE" = "1" ];
-then
-	echo "##############################"
-	echo "RAW DATA"
-	/opt/ibm/dscli/dscli -cfg $CFG "lsda -fmt delim -hdr off $DEVID"
-	echo "##############################"
-fi
+
 ####Get array status - start
-STATUS=$(/opt/ibm/dscli/dscli -cfg $CFG "lsda -fmt delim -hdr off $DEVID" | grep -v "Online")
+STATUS=$(/opt/ibm/dscli/dscli -cfg $CFG "lsddm -fmt delim -hdr off $DEVID" | grep -v "Normal")
 ####Get array status - end
 
 if [[ -z "$STATUS" ]];
 then
-        echo "OK: All Device Apapters are Normal"
+        echo "OK: All Disks are Normal"
         exit 0
 else
-        echo "CRITICAL: Problem found with Device Adapter" $(echo $STATUS | grep -v "Online" | awk -F"," '{print $1}')
+        echo "CRITICAL: Problem found with Disk" $(echo $STATUS | grep -v "Normal" | awk -F"," '{print $1}')
         exit 2
 fi

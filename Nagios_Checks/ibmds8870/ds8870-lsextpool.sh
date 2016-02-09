@@ -1,12 +1,11 @@
 #!/bin/bash
 ########################################################################################
 #
-#       Filename: ds8870-lsda.sh
+#       Filename: ds8870-lsextpool.sh
 #       Author: Matthew Mattox matt@mattox.work
-#       Date: 12/18/2014
-#       Purpose: Nagios Service Check to verify disk array status
-#		Update: Updated to include the CFG files.
-#		Update: 07/01/2015 - Added A1DS88701 and B1DS88701 
+#       Date: 02/03/2015
+#       Purpose: Nagios Service Check to verify EXTPOOL status
+#       Update: Updated to include the CFG files.
 #
 ########################################################################################
 
@@ -20,6 +19,7 @@ Nagios Service Check to verify disk array status.
 OPTIONS:
    -h      Show this message
    -S      ds8870 Name     			Example: chidc8870
+   -A      ExtPool				Example: p0
 EOF
 }
 
@@ -32,6 +32,9 @@ do
              ;;
          S)
              DS8870NAME=$OPTARG
+             ;;
+         A)
+             EXTPOOL=$OPTARG
              ;;
          V)
              VERBOSE=1
@@ -56,6 +59,7 @@ if [ "$VERBOSE" = "1" ];
 then
 echo "########################################"
 echo "DS8870 Name:" $DS8870NAME
+echo "ExtPool:" $EXTPOOL
 echo "########################################"
 read -p "Please press [Enter] to continue..."
 fi
@@ -81,22 +85,34 @@ fi
 
 DEVID=$(cat $CFG | grep ^devid | awk '{print $2}')
 
-if [ "$VERBOSE" = "1" ];
-then
-	echo "##############################"
-	echo "RAW DATA"
-	/opt/ibm/dscli/dscli -cfg $CFG "lsda -fmt delim -hdr off $DEVID"
-	echo "##############################"
-fi
 ####Get array status - start
-STATUS=$(/opt/ibm/dscli/dscli -cfg $CFG "lsda -fmt delim -hdr off $DEVID" | grep -v "Online")
+/opt/ibm/dscli/dscli -cfg $CFG "showextpool $EXTPOOL" > /tmp/ds8870-lsextpool--$DS8870NAME--$EXTPOOL
 ####Get array status - end
 
-if [[ -z "$STATUS" ]];
+usedpercentage=$(cat /tmp/ds8870-lsextpool--$DS8870NAME--$EXTPOOL | grep  -w '^%allocated ' | awk '{print $2}')
+usedgb=$(cat /tmp/ds8870-lsextpool--$DS8870NAME--$EXTPOOL | grep -w '^allocated' | awk '{print $2}')
+freegb=$(cat /tmp/ds8870-lsextpool--$DS8870NAME--$EXTPOOL | grep -w '^available' | awk '{print $2}')
+totalgb=$(cat /tmp/ds8870-lsextpool--$DS8870NAME--$EXTPOOL | grep -w '^configured' | awk '{print $2}')
+
+if [[ "$VERBOSE" == "1" ]]; then
+        echo "Pool ID:" $EXTPOOL
+        echo "Used Percentage:" $usedpercentage
+        echo "Used in GBs:" $usedgb
+        echo "Free in GBs:" $freegb
+        echo "Total in GBs:" $totalgb
+fi
+
+if [[ $usedpercentage -eq 95 ]];
 then
-        echo "OK: All Device Apapters are Normal"
-        exit 0
-else
-        echo "CRITICAL: Problem found with Device Adapter" $(echo $STATUS | grep -v "Online" | awk -F"," '{print $1}')
+        echo "CRITICAL: ExtPool" $EXTPOOL "has" $usedpercentage "% used | usedpercentage="$usedpercentage"% usedgb="$usedgb"GB freegb="$freegb"GB totalgb="$totalgb"GB"
         exit 2
 fi
+
+if [[ $usedpercentage -eq 90 ]];
+then
+        echo "WARNING: ExtPool" $EXTPOOL "has" $usedpercentage "% used | usedpercentage="$usedpercentage"% usedgb="$usedgb"GB freegb="$freegb"GB totalgb="$totalgb"GB"
+        exit 1
+fi
+
+echo "OK: ExtPool" $EXTPOOL "is allocated at" $usedpercentage "% used | usedpercentage="$usedpercentage"% usedgb="$usedgb"GB freegb="$freegb"GB totalgb="$totalgb"GB"
+exit 0
