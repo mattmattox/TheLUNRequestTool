@@ -69,12 +69,12 @@ then
 fi
 if [ "$DS8870NAME" == "b1ds88701" ] || [ "$DS8870NAME" == "B1DS88701" ]
 then
-	DS8870NAME="B1DS88701.rss.hyatt.com"
+	DS8870NAME="B1DS88701"
         CFG="/opt/ibm/dscli/profile/B1DS88701.profile"
 fi
 if [ "$DS8870NAME" == "c1ds88701" ] || [ "$DS8870NAME" == "C1DS88701" ]
 then
-	DS8870NAME="B1DS88701.rss.hyatt.com"
+	DS8870NAME="C1DS88701"
         CFG="/opt/ibm/dscli/profile/C1DS88701.profile"
 fi
 
