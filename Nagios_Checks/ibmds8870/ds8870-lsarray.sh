@@ -5,7 +5,7 @@
 #       Author: Matthew Mattox matt@mattox.work
 #       Date: 12/18/2014
 #       Purpose: Nagios Service Check to verify disk array status
-#		Update: 07/01/2015 - Added B1DS88701 and SPHXDC88701 
+#		Update: 07/01/2015 - Added A1DS88701 and B1DS88701 
 #
 ########################################################################################
 
